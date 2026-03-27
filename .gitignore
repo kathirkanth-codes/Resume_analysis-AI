@@ -32,3 +32,5 @@ Thumbs.db
 # Your local test files
 dummy_code.py
 test_pdf_parser.py
+backend/dummy_code.py
+backend/test_pdf_parser.py
