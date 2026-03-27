@@ -1,2 +1,34 @@
-.venv
-_pycache_
+# Python cache/compiled
+__pycache__
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Environment/secrets
+.env
+.env.*
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Your local test files
+dummy_code.py
+test_pdf_parser.py
