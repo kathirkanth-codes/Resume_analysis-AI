@@ -1,0 +1,25 @@
+{
+  "metadata": {
+    "source_file": "Harshini's Resume.pdf",
+    "parsed_at": "2026-04-06 14:37:29",
+    "sections_found": 7,
+    "section_names": [
+      "HEADER",
+      "OBJECTIVE",
+      "EDUCATION",
+      "SKILLS",
+      "PROJECTS",
+      "CERTIFICATIONS",
+      "INTERESTS"
+    ]
+  },
+  "sections": {
+    "HEADER": "HARSHINI CHIRAMANI hchiramani@gmail.com | +91 9363511691 | Perumbakkam, Chennai- 600100\nLeetCode | GitHub | HackerRank | Linkedin",
+    "OBJECTIVE": "To apply strong programming and problem-solving skills in developing scalable, user-centric software solutions while continuously learning and growing as a software professional.",
+    "EDUCATION": "R.M.K Engineering College TamilNadu\nComputer Science and Business Systems B.Tech 2023 - 2027\nCGPA: 8.24\nSri Chaitanya Techno School Chennai\nDegree in HIGHER SECONDARY EXAMINATION (+2) 2021 - 2022\nPercentage: 83.6%\nPawar Public School, Dombivali Mumbai\nDegree in Indian Certificate of Secondary Education 2017 - 2020\nPercentage: 87.83%",
+    "SKILLS": "Programming Languages: Python, C, Java, HTML, CSS, SQL",
+    "PROJECTS": "Museum Bot\nDeveloped an interactive chatbot using JavaScript, HTML5, and CSS3, integrating DOM manipulation and AJAXbased API calls for dynamic interactions. Implemented ticket booking workflows with form validation, session storage, and JSON-based data handling, while enhancing usability through responsive UI design and event-driven\nprogramming for real-time updates.\nCollege Outpass Management Website\nBuilt a full-stack web application with HTML, CSS, JavaScript (frontend) and PHP/MySQL (backend) to digitize the outpass process, ensuring secure record-keeping and real-time tracking. Integrated automated email/SMS\nnotifications, role-based authentication, and RESTful APIs, while improving transparency and efficiency with database normalization and responsive frameworks (Bootstrap/React).\nAgriculture /Image processing for crop disease identification\nDesigned an AI-powered image classification model using Python, OpenCV, TensorFlow/Keras, and CNNs to detect crop diseases. Applied image preprocessing techniques such as segmentation, feature extraction, and noise\nreduction to enhance accuracy, and deployed a Flask/Django prototype that enables farmers to upload crop images and receive real-time ML-driven predictions.\nHuman-Centered Smart Spending Assistant (SpendWise)\nDeveloped a human-in-the-loop personal finance system using React + TypeScript (component-based UI) and Python that analyzes user-submitted transaction data to show category-wise spending insights. Integrated Pandas, NumPy, and\nML simulations (XGBoost, Random Forest) to provide explainable, goal-based savings recommendations while ensuring all financial decisions remain fully user-controlled.\nAI Powered Smart Email Classifier for Enterprises\nDeveloped an end-to-end ML pipeline to classify enterprise emails into 6 categories with 98%+ accuracy using TF-IDF and Logistic Regression. Built an urgency detection module (High/Medium/Low) achieving ~99% accuracy, handling\nclass imbalance effectively. Designed an interactive Streamlit dashboard with real-time filtering, analytics, and visualization using Plotly.",
+    "CERTIFICATIONS": "COURSERA - Create a Project Management Tracker using Microsoft Excel\nSIIRT UNIVERSITESI - 6th International Conference on Global Practice of Multidisciplinary Scientific Studies\nINFOSYS SPRINGBOARD - Explore Machine Learning using Python, Introduction to Artificial Intelligence\nLANGUAGES\nEnglish, Telugu, Tamil, Hindi",
+    "INTERESTS": "Badminton, Participating in Workshops and Symposiums, Travelling & Exploring Cultures"
+  }
+}

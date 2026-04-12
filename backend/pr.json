@@ -1,0 +1,29 @@
+{
+  "metadata": {
+    "source_file": "PremResume.pdf",
+    "parsed_at": "2026-04-10 15:25:48",
+    "sections_found": 9,
+    "section_names": [
+      "HEADER",
+      "PROFESSIONAL SUMMARY",
+      "EXPERIENCE",
+      "PROJECTS",
+      "EDUCATION",
+      "ACHIEVEMENTS",
+      "CERTIFICATIONS",
+      "INTERESTS",
+      "EXTRACURRICULAR"
+    ]
+  },
+  "sections": {
+    "HEADER": "PREM KUMAR P\n+91 7904845242 | iamprem.kumarp@gmail.com | linkedin.com/in/premkumarp | github.com/premkumarp | Portfolio",
+    "PROFESSIONAL SUMMARY": "Computer Science student specializing in Data Science with strong foundations in software engineering, scalable systems,\nand machine learning. Experienced in building full-stack and AI-driven applications, with a focus on automation, backend architecture, and real-world problem solving. Demonstrated ability to design and optimize efficient, scalable systems through\ninternships and high-impact projects.",
+    "EXPERIENCE": "- Vividhra - Full Stack Developer Intern (Certificate) Nov 2024 - Dec 2024\nOn-site\n- Engineered and deployed a scalable Next.js + MySQL application supporting 200+ daily active users.\n- Designed and implemented relational database schemas and RESTful APIs for efficient data processing.\n- Built authentication systems and dashboards, improving operational workflow efficiency by 40%.\n- Infomaps - Mobile App Developer Intern (Certificate) May 2024 - Jul 2024\nOn-site\n- Developed and optimized scalable React Native modules for an application used by 1,000+ users.\n- Implemented offline-first architecture using Redux and Firebase, ensuring seamless low-connectivity usage.\n- Integrated scalable backend services with NoSQL databases to optimize data flow and performance.",
+    "PROJECTS": "- CodyGrow - DS Automation Platform July 2025 - Oct 2025\n- Built a FastAPI-based backend enabling LLM-driven dynamic generation of machine learning workflows using LangChain and Gemini 1.5 Pro.\n- Designed a modular and scalable backend architecture supporting dynamic code generation and secure execution workflows.\n- Integrated AWS services and automated pipelines for dataset processing, model training, and evaluation with minimal\nuser intervention.\n- Thaimai - Mother Tracking App - Infomaps May 2024 - Jul 2024\n- Developed healthcare-focused mobile features using React Native and Firebase for maternal health tracking.\n- Implemented offline-first functionality to ensure accessibility in low-network rural environments.\n- Collaborated in delivering user-centric solutions improving usability and engagement for end users.",
+    "EDUCATION": "- Languages: Python, Java, C, C++, Go, SQL - B.E. CSE (Data Science)\n- Web/App: React.js, Next.js, React Native, Node.js, REST APIs Sathyabama Institute of Science and Technology\nCGPA: 8.36 (2023 - 2027)\n- DS/AI: NumPy, Pandas, Scikit-learn, XGBoost\n- Senior Secondary (CBSE) - 82.8%\n- Core: Data Structures & Algorithms, System Design, OOP, SDLC\n- Secondary (CBSE) - 78.2%\n- Databases: MySQL, PostgreSQL, Firebase",
+    "ACHIEVEMENTS": "- Solved 250+ problems on LeetCode with consistent practice\n- Achieved 50+ day coding streak demonstrating discipline",
+    "CERTIFICATIONS": "- SQL Basic - HackerRank\n- DS Bootcamp - Udemy\n- AI Badge - Microsoft\n- Google DS Foundations - Coursera\n- AWS SA - Virtual Experience\n- Deloitte DA - Virtual Experience\n- SE Intern - HackerRank",
+    "INTERESTS": "- Software engineering and scalable architecture\n- Data science and AI automation\n- Problem solving",
+    "EXTRACURRICULAR": "- Class Rep - CSE-DS (2 semesters)\n- Core Member - The Robotic Society\n- Dance Secretary - Banger Feets"
+  }
+}

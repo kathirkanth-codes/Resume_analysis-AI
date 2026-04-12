@@ -1,0 +1,25 @@
+{
+  "metadata": {
+    "source_file": "soorya_Resume.pdf",
+    "parsed_at": "2026-04-06 14:19:35",
+    "sections_found": 7,
+    "section_names": [
+      "HEADER",
+      "PROFESSIONAL SUMMARY",
+      "EXPERIENCE",
+      "PROJECTS",
+      "TECHNICAL SKILLS",
+      "EDUCATION",
+      "CERTIFICATIONS"
+    ]
+  },
+  "sections": {
+    "HEADER": "SOORYA SANKAR\n+91 8807007325 | # sooryasankar11@gmail.com | linkedin.com/in/soorya05 |\n§ github.com/SooryaSankar05",
+    "PROFESSIONAL SUMMARY": "Pre-final year B.E. Computer Science and Engineering (Data Science) student aspiring to be a Software Development\nEngineer, with strong problem-solving skills and a solid foundation in data structures & algorithms, and system design.",
+    "EXPERIENCE": "Coromandel International Limited Dec 2024 - Jan 2025\nData Analyst Internship On-Site\n- Developed dashboards and reports to present findings.\n- Assisted in data cleaning, visualization, and reporting using Excel.\nE.I.D.- Parry (India) Limited May 2025 - June 2025\nIT & Network Summer Intern On-Site\n- Developed foundational understanding of enterprise networks, including IP addressing, LAN/WAN, subnetting,\nand troubleshooting with Wireshark.\n- Attended live troubleshooting sessions, resolved connectivity issues, and maintained technical documentation.",
+    "PROJECTS": "Full Stack Real-Time Chat App (MERN) | MERN, Socket.io, JWT, Tailwind, DaisyUI, Zustand\n- Developed a real-time chat application using MERN Stack with Socket.io for live messaging.\n- Implemented JWT authentication authorization with secure user access.\n- Added online user status tracking and built responsive UI using Tailwind CSS + DaisyUI.\n- Managed global state efficiently using Zustand.\nSentriFusion - Multimodal Smart Surveillance System | Raspberry Pi, Python, TFLite, Streamlit\n- Built an AI-based security system combining video object detection and audio anomaly detection for real-time threat identification.\n- Deployed TensorFlow Lite models on Raspberry Pi for fast offline inference, reducing false positives and improving reliability.\n- Developed a Streamlit monitoring dashboard with automated alerts, event snapshots, and detailed logs.\n- Improved detection accuracy and minimized false alarms for scalable and cost-effective surveillance.\nExplainable Scenario-Based Crop Yield Forecasting System | Python, LightGBM, SHAP, FastAPI, Streamlit\n- Built an end-to-end crop yield forecasting system using NDVI, climate, soil, and historical yield data.\n- Developed production-grade ML pipelines with validation, versioning, and consistent training-inference flow.\n- Implemented LightGBM-based ensemble modeling with deployable inference.\n- Integrated scenario testing and SHAP explainability for robust and interpretable predictions.",
+    "TECHNICAL SKILLS": "Languages: Python, Java, C, MySQL\nTools & Technologies: VSCode, Git, GitHub, Power BI, Tableau, Microsoft Office\nWeb/App: HTML, CSS, Java Script, React.js, Node.js, Express.js, Android Studio\nDS/Al: NumPy, Pandas, Scikit-learn, Matplotlib, Seaborn, Streamlit\nDatabases: SQL (MySQL), NoSQL (MangoDB)\nCore: OOP, Debugging, Design, Scalability,",
+    "EDUCATION": "Sathyabama Institute of Science and Technology Chennai, India\nB.E. in CSE (Data Science) - CGPA: 8.48* 2023 - 2027\nThe Indian School Bahrain Kingdom of Bahrain\nSenior Secondary (CBSE) - CGPA: 7.4 2019 - 2023",
+    "CERTIFICATIONS": "- Data Science Bootcamp certificate(Udemy) 2\n- IT & Network Internship certificate 2\n- Networking Essentials certificate(CISCO) 2"
+  }
+}
