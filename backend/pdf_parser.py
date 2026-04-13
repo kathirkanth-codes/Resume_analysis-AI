@@ -158,6 +158,78 @@ def _group_words_by_line(words: list) -> list[tuple[float, list]]:
     return sorted(line_groups, key=lambda g: g[0])
 
 
+def _make_word_dict(chars: list) -> dict:
+    """Build a word dict (same shape as pdfplumber word dicts) from a list of chars."""
+    return {
+        'text':   ''.join(c['text'] for c in chars),
+        'x0':     chars[0]['x0'],
+        'x1':     chars[-1]['x1'],
+        'top':    min(c['top']    for c in chars),
+        'bottom': max(c['bottom'] for c in chars),
+    }
+
+
+def _chars_to_word_dicts(chars: list) -> list:
+    """
+    Convert pdfplumber character dicts into word dicts using adaptive spacing.
+
+    WHY THIS EXISTS:
+    extract_words(x_tolerance=3) uses a fixed pixel threshold to split words.
+    In compressed-font PDFs (like Prem's resume), the inter-word space is
+    sometimes 0–2px, so extract_words merges entire sentences into one token:
+        "Engineered and deployed" → "Engineeredanddeployed"
+
+    This function uses each character's own width to decide word boundaries.
+    If the gap to the next character is > 0.8× the average char width so far,
+    it is a word boundary — regardless of the absolute pixel value.
+    This is adaptive: it works correctly across different font sizes and densities.
+
+    Returns a list of word dicts compatible with all existing helpers
+    (_group_words_by_line, _words_to_text, _detect_col_split, etc.).
+    """
+    if not chars:
+        return []
+
+    # Filter out whitespace-only chars, sort top→bottom, left→right
+    chars = sorted(
+        [c for c in chars if c.get('text', '').strip()],
+        key=lambda c: (round(c['top'] / _LINE_GAP) * _LINE_GAP, c['x0'])
+    )
+    if not chars:
+        return []
+
+    words          = []
+    current_chars  = [chars[0]]
+
+    for char in chars[1:]:
+        prev = current_chars[-1]
+
+        # New line — flush current word and start fresh
+        if abs(char['top'] - prev['top']) > _LINE_GAP:
+            words.append(_make_word_dict(current_chars))
+            current_chars = [char]
+            continue
+
+        gap = char['x0'] - prev['x1']
+
+        # Adaptive threshold: 0.8× the average width of chars collected so far.
+        # Minimum of 1.5px so we never split ligatures or zero-width pairs.
+        total_width  = prev['x1'] - current_chars[0]['x0']
+        avg_ch_width = total_width / len(current_chars) if len(current_chars) > 1 else (prev['x1'] - prev['x0'])
+        threshold    = max(avg_ch_width * 0.25, 0.8)
+
+        if gap > threshold:
+            words.append(_make_word_dict(current_chars))
+            current_chars = [char]
+        else:
+            current_chars.append(char)
+
+    if current_chars:
+        words.append(_make_word_dict(current_chars))
+
+    return words
+
+
 def _words_to_text(words: list) -> str:
     """
     Converts pdfplumber word objects into readable text lines.
@@ -213,19 +285,22 @@ def _detect_two_col_start_y(page) -> float:
     Returns page.height if no two-col zone is found (full page = single col).
     """
     midpoint = page.width / 2
-    # [ATS-2] x_tolerance=3 for compressed-font PDFs
-    all_words = page.extract_words(x_tolerance=3, y_tolerance=3)
+    # Use char-based extraction — fixes word merging in compressed-font PDFs
+    all_words = _chars_to_word_dicts(page.chars)
 
     # [OPT-3] Use shared helper — no more dict + sorted(keys) pattern
     for anchor_y, group in _group_words_by_line(all_words):
-        leftmost_x = min(w['x0'] for w in group)
-        if leftmost_x <= midpoint:
-            continue  # line starts on the left side
+        # Check only right-side words — left-column words at the same Y
+        # caused leftmost_x to always be <= midpoint, hiding right headers.
+        right_words = [w for w in group if w['x0'] >= midpoint]
+        if not right_words:
+            continue  # nothing on the right side at this Y level
 
-        row = sorted(group, key=lambda w: w['x0'])
-        line_text = ' '.join(w['text'] for w in row)
+        right_text = ' '.join(
+            w['text'] for w in sorted(right_words, key=lambda w: w['x0'])
+        )
 
-        if _is_visual_header(line_text):
+        if _is_visual_header(right_text):
             return anchor_y - 5  # small buffer above the header line
 
     return page.height
@@ -274,8 +349,8 @@ def _extract_page_text(page) -> str:
     H = page.height
     split_y = _detect_two_col_start_y(page)
 
-    # [ATS-2] x_tolerance=3
-    all_words = page.extract_words(x_tolerance=3, y_tolerance=3)
+    # Use char-based extraction — fixes word merging in compressed-font PDFs
+    all_words = _chars_to_word_dicts(page.chars)
 
     parts = []
 
@@ -385,7 +460,7 @@ def _clean_line(line: str) -> str:
     line = re.sub(r'[\u200b\u200c\u200d\ufeff]', '', line)
     line = re.sub(r'[\u2018\u2019]', "'", line)
     line = re.sub(r'[\u201c\u201d]', '"', line)
-    line = line.replace('•', '-')
+    line = line.replace('•', '-').replace('\uf0b7', '-')
     line = line.replace('–', '-').replace('—', ' - ')
     line = re.sub(r'[ \t]+', ' ', line)
     return line.strip()

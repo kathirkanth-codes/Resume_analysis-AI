@@ -2,39 +2,200 @@
 # resume_extraction.py
 # =============================================================================
 # PURPOSE  : Convert raw section text from pdf_parser into structured JSON.
-#            Rule-based parsing with an optional semantic matching layer
-#            for gap analysis and synonym-aware skill comparison.
+#            Primary path  : Groq LLM  — semantic, format-agnostic, works on
+#                            any resume layout without fragile rules.
+#            Fallback path : Rule-based parsing — activates automatically
+#                            when the LLM call fails (quota, network, etc.).
 #
 # PIPELINE : sections_dict → structured_json
 # INPUT    : { "SKILLS": "...", "EXPERIENCE": "...", ... }  ← from pdf_parser
 # OUTPUT   : { "skills": [], "experience": [], "education": [], "projects": [] }
 #
-# ── SEMANTIC LAYER NOTE ───────────────────────────────────────────────────────
-# The semantic functions (semantic_skill_match, find_missing_skills) use a
-# pre-trained sentence-transformer model. This is NOT an LLM API call — it is
-# a deterministic embedding lookup that maps text → fixed-size float vectors.
-# No training occurs at runtime. The model runs locally, offline, in ~50ms.
-#
-# Install once:  pip install sentence-transformers
-# Model used:    all-MiniLM-L6-v2  (80MB, fast, accurate for skill similarity)
+# REQUIRES : pip install groq python-dotenv
+# API KEY  : GROQ_API_KEY in backend/.env
 # =============================================================================
 
+import os
 import re
+import json
 from typing import Optional
+from dotenv import load_dotenv
+from groq import Groq
+
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env'))
+
+_MODEL  = "llama-3.3-70b-versatile"
+_CLIENT = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SECTION KEY LOOKUP (pdf_parser outputs ALL-CAPS keys)
-# ─────────────────────────────────────────────────────────────────────────────
+# =============================================================================
+# LLM-BASED EXTRACTION — PRIMARY PATH
+# =============================================================================
 
+def _build_extraction_prompt(sections: dict) -> str:
+    """
+    Assemble the prompt from all non-HEADER sections.
+    HEADER contains only name/contact info and adds noise without value.
+    """
+    relevant = {k: v for k, v in sections.items() if k != "HEADER" and v.strip()}
+    if not relevant:
+        return ""
+
+    blocks = [f"[{section}]\n{content.strip()}" for section, content in relevant.items()]
+    resume_text = "\n\n".join(blocks)
+
+    return f"""Extract structured data from this resume. Return ONLY valid JSON — no markdown, no explanation.
+
+RESUME:
+{resume_text}
+
+---
+
+INSTRUCTIONS:
+
+skills:
+- Return a flat list of individual skill names (languages, frameworks, tools, concepts)
+- Split categorised lists: "Languages: Python, SQL" → ["Python", "SQL"]
+- Do NOT include category label words like "Languages" or "Frameworks"
+- No duplicates
+
+experience:
+- One entry per internship, job, or work placement
+- company: organisation name only
+- role: job title only
+- duration: date range as written (e.g. "Jun 2024 - Aug 2024"), or "" if absent
+- bullets: list of achievement/responsibility descriptions — plain text, no leading dashes
+
+education:
+- One entry per degree, diploma, or school level
+- degree: full degree name and specialisation
+- institution: school/university/college name only
+- grade: CGPA or percentage as a plain number string (e.g. "8.5" or "78.2"), or ""
+- year: 4-digit graduation or expected year, or ""
+
+projects:
+- One entry per distinct project
+- title: project name only
+- duration: date range if present, else ""
+- bullets: list of description points — plain text, no leading dashes
+
+Return exactly this JSON shape:
+{{
+  "skills": ["skill1", "skill2"],
+  "experience": [
+    {{"company": "...", "role": "...", "duration": "...", "bullets": ["..."]}}
+  ],
+  "education": [
+    {{"degree": "...", "institution": "...", "grade": "...", "year": ""}}
+  ],
+  "projects": [
+    {{"title": "...", "duration": "...", "bullets": ["..."]}}
+  ]
+}}"""
+
+
+def _validate_and_clean(data: dict) -> dict:
+    """
+    Coerce the LLM response into the exact shape the rest of the pipeline expects.
+    Fills in defaults for any missing or malformed fields so downstream never breaks.
+    """
+    def to_str_list(lst) -> list:
+        if not isinstance(lst, list):
+            return []
+        return [str(x).strip() for x in lst if x and str(x).strip()]
+
+    def clean_exp(e) -> Optional[dict]:
+        if not isinstance(e, dict):
+            return None
+        return {
+            "company":  str(e.get("company")  or "").strip(),
+            "role":     str(e.get("role")     or "").strip(),
+            "duration": str(e.get("duration") or "").strip(),
+            "bullets":  to_str_list(e.get("bullets", [])),
+        }
+
+    def clean_edu(e) -> Optional[dict]:
+        if not isinstance(e, dict):
+            return None
+        return {
+            "degree":      str(e.get("degree")      or "").strip(),
+            "institution": str(e.get("institution") or "").strip(),
+            "grade":       str(e.get("grade")       or "").strip(),
+            "year":        str(e.get("year")        or "").strip(),
+        }
+
+    def clean_proj(e) -> Optional[dict]:
+        if not isinstance(e, dict):
+            return None
+        return {
+            "title":    str(e.get("title")    or "").strip(),
+            "duration": str(e.get("duration") or "").strip(),
+            "bullets":  to_str_list(e.get("bullets", [])),
+        }
+
+    return {
+        "skills":     to_str_list(data.get("skills", [])),
+        "experience": [x for x in (clean_exp(e)  for e in data.get("experience", [])) if x],
+        "education":  [x for x in (clean_edu(e)  for e in data.get("education",  [])) if x],
+        "projects":   [x for x in (clean_proj(e) for e in data.get("projects",   [])) if x],
+    }
+
+
+def _empty_result() -> dict:
+    return {"skills": [], "experience": [], "education": [], "projects": []}
+
+
+# =============================================================================
+# RULE-BASED EXTRACTION — FALLBACK PATH
+# =============================================================================
+# Activated automatically when the Groq call fails (quota, network, bad JSON).
+# Handles the common well-formatted resume layouts reliably.
+# =============================================================================
+
+# Section key variants — pdf_parser may output any of these
 _SKILLS_KEYS     = ["SKILLS", "TECHNICAL SKILLS"]
 _EXPERIENCE_KEYS = ["EXPERIENCE", "WORK EXPERIENCE"]
 _EDUCATION_KEYS  = ["EDUCATION"]
 _PROJECTS_KEYS   = ["PROJECTS"]
 
+_SKILL_CATEGORY_LABEL = re.compile(
+    r'^(?:'
+    r'[A-Za-z \/&]+\s*:'
+    r'|'
+    r'(?:Technical|Analytical|Soft|Core|Professional|'
+    r'Web|App|Languages?|Databases?|Frameworks?|Tools?|DS|AI)\s*(?:Skills?|Tools?|Stack)?\s+'
+    r')',
+    re.MULTILINE | re.IGNORECASE
+)
+_SKILL_DELIMITERS = re.compile(r'[,\n|•]+')
+_BULLET_PREFIX    = re.compile(r'^-+\s*')
+_DATE_PATTERN     = re.compile(
+    r'\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*'
+    r'[\s\'\-]?\d{2,4}'
+    r'(?:\s*[-–]\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*'
+    r'[\s\']?\d{0,4}|[-–]\s*(?:Present|Current|present|current))?',
+    re.IGNORECASE
+)
+
+_ACTION_VERBS = {
+    'built', 'developed', 'designed', 'created', 'implemented', 'worked',
+    'integrated', 'deployed', 'engineered', 'collaborated', 'performed',
+    'identified', 'completed', 'customized', 'managed', 'led', 'delivered',
+    'optimized', 'automated', 'analyzed', 'produced', 'maintained',
+    'improved', 'resolved', 'supported', 'tested', 'configured', 'launched',
+    'reduced', 'increased', 'streamlined', 'migrated', 'established',
+    'solved', 'achieved', 'contributed', 'spearheaded', 'coordinated',
+    'assisted', 'attended', 'used', 'utilized', 'applied', 'handled',
+    'gathered', 'collected', 'extracted', 'processed', 'prepared',
+    'presented', 'reviewed', 'updated', 'refactored', 'fixed', 'added',
+    'wrote', 'conducted', 'monitored', 'tracked', 'documented', 'evaluated',
+    'trained', 'administered', 'installed', 'helped', 'made',
+    'converted', 'transformed', 'generated', 'constructed', 'executed',
+    'modified', 'validated', 'verified', 'enabled', 'enhanced',
+}
+
 
 def _get_section(sections: dict, keys: list) -> str:
-    """Return the first non-empty section value matching any of the given keys."""
     for key in keys:
         val = sections.get(key, "").strip()
         if val:
@@ -42,60 +203,16 @@ def _get_section(sections: dict, keys: list) -> str:
     return ""
 
 
-# =============================================================================
-# RULE-BASED PARSERS (no AI — pipeline constraint)
-# =============================================================================
-
-# Pre-compiled patterns — compiled once at import, not per call
-
-# Matches skill section category labels in two formats:
-#   Format A (colon)     → "Languages:", "Web/App:", "DS/AI:"
-#   Format B (no colon)  → "Technical Skills SQL", "Analytical Skills Data"
-#                           Label detected by known prefix words + space + content.
-#
-# Format B uses a named group of known category words so we don't accidentally
-# strip real skill names like "Python" or "Machine Learning".
-_SKILL_CATEGORY_LABEL = re.compile(
-    r'^(?:'
-    r'[A-Za-z \/&]+\s*:'                                # Format A: any label + colon
-    r'|'
-    r'(?:Technical|Analytical|Soft|Core|Professional|'  # Format B: known prefix words
-    r'Web|App|Languages?|Databases?|Frameworks?|Tools?|DS|AI)\s+(?:Skills?|Tools?|Stack)?\s+'
-    r')',
-    re.MULTILINE | re.IGNORECASE
-)
-_SKILL_DELIMITERS = re.compile(r'[,\n|•]+')
-_BULLET_PREFIX    = re.compile(r'^-+\s*')
-
-
 def _parse_skills(raw: str) -> list:
-    """
-    Splits skills text into individual skill tokens.
-
-    Handles:
-    - Category labels    → "Languages: Python, SQL"  →  ["Python", "SQL"]
-    - Comma-separated    → "React, Node.js, REST APIs"
-    - Newline-separated  → one skill per line
-    - Bullet-prefixed    → "- Python\n- SQL"
-    - Pipe-delimited     → "Python | SQL | React"
-
-    Deduplicates preserving first-occurrence order (case-insensitive).
-    """
-    # Strip category labels ("Languages:", "Technical Skills:", etc.)
+    lines_clean = [_BULLET_PREFIX.sub('', ln).strip() for ln in raw.split('\n')]
+    raw = '\n'.join(lines_clean)
     raw = _SKILL_CATEGORY_LABEL.sub('', raw)
-
-    # Split by all common delimiters
     tokens = _SKILL_DELIMITERS.split(raw)
-
     skills = []
     for token in tokens:
-        # Remove any leading bullet/dash artifact
         token = _BULLET_PREFIX.sub('', token).strip()
-        # Filter noise: empty, single characters, stray punctuation
         if token and len(token) > 1 and not token.isdigit():
             skills.append(token)
-
-    # Deduplicate preserving order
     seen: set = set()
     unique = []
     for s in skills:
@@ -106,99 +223,155 @@ def _parse_skills(raw: str) -> list:
     return unique
 
 
-def _parse_bullets(raw: str) -> list:
-    """
-    Extracts bullet points and role/company headers from an EXPERIENCE or
-    PROJECTS section.
+def _is_entry_header(line: str) -> bool:
+    clean = _BULLET_PREFIX.sub('', line).strip()
+    if not clean:
+        return False
+    if _DATE_PATTERN.search(clean):
+        return True
+    if len(clean) > 80:
+        return False
+    if re.search(r'\d+\s*[+%]|\d{1,3},\d{3}', clean):
+        return False
+    first_word = clean.split()[0].lower().rstrip('.,;:()')
+    if first_word in _ACTION_VERBS:
+        return False
+    if clean.endswith(('.', '!', '?')):
+        return False
+    return True
 
-    Strategy:
-    - Lines starting with '-' → bullet content (strip the dash).
-    - Short lines (≤ 4 words, no dash) → label/header (company, role, date).
-      These are kept as-is so the evaluator has full context.
-    - Longer non-bullet lines → treated as continuation of previous bullet
-      if previous exists, otherwise kept as a standalone entry.
 
-    Returns a flat list of strings: mix of headers and bullet texts.
-    """
-    lines = [l.strip() for l in raw.split('\n') if l.strip()]
-    result = []
-    current_bullet: Optional[str] = None
+def _split_exp_header(raw_header: str) -> dict:
+    date_match = _DATE_PATTERN.search(raw_header)
+    duration   = date_match.group(0).strip() if date_match else ""
+    base       = raw_header[:date_match.start()].strip() if date_match else raw_header
+    base       = re.sub(r'\s*\([^)]*\)', '', base).strip().rstrip(' -')
+    parts      = re.split(r'\s+-\s+', base, maxsplit=1)
+    return {
+        "company":  parts[0].strip(),
+        "role":     parts[1].strip() if len(parts) > 1 else "",
+        "duration": duration,
+        "bullets":  [],
+    }
 
-    for line in lines:
-        is_bullet = line.startswith('-')
 
-        if is_bullet:
-            # Flush any pending bullet before starting a new one
-            if current_bullet is not None:
-                result.append(current_bullet)
-            current_bullet = _BULLET_PREFIX.sub('', line).strip()
+def _split_proj_header(raw_header: str) -> dict:
+    date_match = _DATE_PATTERN.search(raw_header)
+    duration   = date_match.group(0).strip() if date_match else ""
+    title      = raw_header[:date_match.start()].strip() if date_match else raw_header
+    return {"title": title.rstrip(' -').strip(), "duration": duration, "bullets": []}
 
-        else:
-            word_count = len(line.split())
 
-            if word_count <= 4:
-                # Short line = label/header (company, date, title)
-                if current_bullet is not None:
-                    result.append(current_bullet)
-                    current_bullet = None
-                result.append(line)
+def _parse_grouped_entries(raw: str, mode: str) -> list:
+    entries = []
+    current = None
+
+    for line in raw.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+
+        if line.startswith('-'):
+            clean = _BULLET_PREFIX.sub('', line).strip()
+            if _is_entry_header(line):
+                if current is not None:
+                    entries.append(current)
+                current = (
+                    _split_exp_header(clean) if mode == 'experience'
+                    else _split_proj_header(clean)
+                )
             else:
-                # Long non-bullet line
-                if current_bullet is not None:
-                    # Likely soft-wrap continuation not caught by parser
-                    current_bullet += ' ' + line
-                else:
-                    # Standalone sentence (no preceding bullet)
-                    result.append(line)
+                if current is None:
+                    current = (
+                        {'company': '', 'role': '', 'duration': '', 'bullets': []}
+                        if mode == 'experience' else
+                        {'title': '', 'duration': '', 'bullets': []}
+                    )
+                current['bullets'].append(clean)
+        else:
+            if _DATE_PATTERN.search(line):
+                if current is not None:
+                    entries.append(current)
+                current = (
+                    _split_exp_header(line) if mode == 'experience'
+                    else _split_proj_header(line)
+                )
+            elif (current is not None and current['bullets']
+                  and line and line[0].islower() and len(line.split()) >= 3):
+                current['bullets'][-1] += ' ' + line
+            elif len(line.split()) >= 7:
+                if current is None:
+                    current = (
+                        {'company': '', 'role': '', 'duration': '', 'bullets': []}
+                        if mode == 'experience' else
+                        {'title': '', 'duration': '', 'bullets': []}
+                    )
+                current['bullets'].append(line)
 
-    # Flush the last pending bullet
-    if current_bullet is not None:
-        result.append(current_bullet)
+    if current is not None:
+        entries.append(current)
 
-    return [r for r in result if r]
+    return [e for e in entries if e]
 
 
-def _parse_education(raw: str) -> list:
-    """
-    Extracts education entries.
+def _parse_education_structured(raw: str) -> list:
+    entries = []
+    current = None
 
-    Education sections are typically structured as short labeled lines
-    (degree, institution, CGPA, year). Returns each non-empty, de-bulleted line.
-    """
-    lines = []
     for line in raw.split('\n'):
         line = _BULLET_PREFIX.sub('', line).strip()
-        if line:
-            lines.append(line)
-    return lines
+        if not line:
+            continue
+
+        grade_match = re.search(r'(\d+\.?\d*)\s*%|CGPA\s*[:\-]?\s*(\d+\.?\d*)', line, re.IGNORECASE)
+        year_match  = re.search(r'\b(20\d{2})\b', line)
+        is_school   = any(w in line.lower() for w in ['university', 'institute', 'college', 'school', 'academy'])
+        is_degree   = any(w in line.upper() for w in [
+            'B.E', 'B.TECH', 'M.E', 'M.TECH', 'BSC', 'MSC', 'MBA', 'CSE',
+            'SECONDARY', 'CBSE', 'BACHELOR', 'MASTER', 'ENGINEERING',
+            'DIPLOMA', 'STANDARD', 'B.SC', 'M.SC', 'PHD', 'DOCTORATE',
+        ])
+
+        if grade_match and current:
+            current['grade'] = grade_match.group(1) or grade_match.group(2)
+            if year_match:
+                current['year'] = year_match.group(1)
+        elif is_school and current:
+            current['institution'] = line
+        elif is_degree or (not is_school and not grade_match and len(line.split()) <= 4):
+            if current:
+                entries.append(current)
+            current = {
+                'degree':      line,
+                'institution': '',
+                'grade':       '',
+                'year':        year_match.group(1) if year_match else '',
+            }
+
+    if current:
+        entries.append(current)
+
+    return [e for e in entries if e['degree']]
+
+
+def _extract_resume_rule_based(sections: dict) -> dict:
+    """Rule-based fallback. Used when LLM is unavailable."""
+    return {
+        "skills":     _parse_skills(_get_section(sections, _SKILLS_KEYS)),
+        "experience": _parse_grouped_entries(_get_section(sections, _EXPERIENCE_KEYS), mode='experience'),
+        "education":  _parse_education_structured(_get_section(sections, _EDUCATION_KEYS)),
+        "projects":   _parse_grouped_entries(_get_section(sections, _PROJECTS_KEYS), mode='project'),
+    }
 
 
 # =============================================================================
-# SEMANTIC MATCHING LAYER
-# =============================================================================
-# Uses sentence-transformers to compute cosine similarity between skill strings.
-# This allows matching synonyms and related terms the keyword approach misses:
-#
-#   "FastAPI"         ≈  "REST API framework"      (score ≈ 0.71)
-#   "Redux"           ≈  "state management"         (score ≈ 0.68)
-#   "Scikit-learn"    ≈  "machine learning library" (score ≈ 0.74)
-#   "Firebase"        ≈  "NoSQL cloud database"     (score ≈ 0.65)
-#
-# The model is loaded lazily — only on the first call that needs it.
-# Subsequent calls reuse the singleton (no repeated disk I/O).
+# SEMANTIC MATCHING LAYER  (optional utility — not part of the main pipeline)
 # =============================================================================
 
-_encoder = None   # Singleton — loaded once per process
+_encoder = None
 
 
 def _get_encoder():
-    """
-    Lazily load the sentence-transformer model.
-
-    Returns the SentenceTransformer instance if available, or None if the
-    package is not installed. Marks the encoder as False after a failed
-    import so we don't retry on every subsequent call.
-    """
     global _encoder
     if _encoder is None:
         try:
@@ -212,15 +385,11 @@ def _get_encoder():
                 "  Semantic matching will fall back to substring matching.\n"
                 "  Install with:  pip install sentence-transformers"
             )
-            _encoder = False   # Sentinel — do not retry
+            _encoder = False
     return _encoder if _encoder is not False else None
 
 
 def _cosine_similarity_matrix(a, b):
-    """
-    Vectorised cosine similarity between two numpy arrays.
-    a: shape (m, d), b: shape (n, d)  →  returns matrix of shape (m, n).
-    """
     import numpy as np
     a_norm = a / (np.linalg.norm(a, axis=1, keepdims=True) + 1e-10)
     b_norm = b / (np.linalg.norm(b, axis=1, keepdims=True) + 1e-10)
@@ -234,56 +403,32 @@ def semantic_skill_match(
 ) -> list:
     """
     Find semantically similar pairs between resume skills and a target list.
-
-    Args:
-        resume_skills:  Skills extracted from the resume (from extract_resume).
-        target_skills:  Skills from the job description or a standard taxonomy.
-        threshold:      Cosine similarity cutoff in [0, 1].
-                        0.62 is intentionally permissive to catch synonyms.
-                        Raise to 0.75+ for stricter exact-match behaviour.
-
-    Returns:
-        List of dicts sorted by descending similarity:
-        [{ "resume_skill": str, "target_skill": str, "score": float }, ...]
-        Only pairs at or above threshold are returned.
-
-    Fallback (sentence-transformers not installed):
-        Case-insensitive substring matching — score is always 1.0.
+    Returns [{ "resume_skill", "target_skill", "score" }, ...] sorted by score.
+    Falls back to substring matching if sentence-transformers is not installed.
     """
     if not resume_skills or not target_skills:
         return []
 
     encoder = _get_encoder()
 
-    # ── Fallback: substring matching ──────────────────────────────────────────
     if encoder is None:
         matches = []
         for rs in resume_skills:
             for ts in target_skills:
                 if rs.lower() in ts.lower() or ts.lower() in rs.lower():
-                    matches.append({
-                        "resume_skill":  rs,
-                        "target_skill":  ts,
-                        "score":         1.0,
-                    })
+                    matches.append({"resume_skill": rs, "target_skill": ts, "score": 1.0})
         return matches
 
-    # ── Semantic matching ─────────────────────────────────────────────────────
-    src_emb = encoder.encode(resume_skills, convert_to_numpy=True, show_progress_bar=False)
-    tgt_emb = encoder.encode(target_skills, convert_to_numpy=True, show_progress_bar=False)
-
-    sim_matrix = _cosine_similarity_matrix(src_emb, tgt_emb)  # (m, n)
+    src_emb    = encoder.encode(resume_skills, convert_to_numpy=True, show_progress_bar=False)
+    tgt_emb    = encoder.encode(target_skills, convert_to_numpy=True, show_progress_bar=False)
+    sim_matrix = _cosine_similarity_matrix(src_emb, tgt_emb)
 
     matches = []
     for i, rs in enumerate(resume_skills):
         for j, ts in enumerate(target_skills):
             score = float(sim_matrix[i, j])
             if score >= threshold:
-                matches.append({
-                    "resume_skill": rs,
-                    "target_skill": ts,
-                    "score":        round(score, 3),
-                })
+                matches.append({"resume_skill": rs, "target_skill": ts, "score": round(score, 3)})
 
     return sorted(matches, key=lambda x: x["score"], reverse=True)
 
@@ -294,35 +439,15 @@ def find_missing_skills(
     threshold: float = 0.62,
 ) -> list:
     """
-    Return target skills NOT covered by any resume skill above the threshold.
-
-    A target skill is considered 'covered' if at least one resume skill is
-    semantically similar to it (score ≥ threshold).
-
-    This is the primary gap analysis function — call it from ai_evaluator.py
-    when a job description is available:
-
-        from resume_extraction import find_missing_skills
-        gaps = find_missing_skills(structured["skills"], jd_skills)
-
-    Args:
-        resume_skills: Skills from the resume.
-        target_skills: Required skills from a job description or taxonomy.
-        threshold:     Same cosine cutoff as semantic_skill_match.
-
-    Returns:
-        List of target skills not matched by any resume skill.
+    Return target skills not covered by any resume skill above the threshold.
+    Use this for gap analysis when a job description is available.
     """
     if not target_skills:
         return []
     if not resume_skills:
         return target_skills[:]
-
-    matched_targets = {
-        m["target_skill"]
-        for m in semantic_skill_match(resume_skills, target_skills, threshold)
-    }
-    return [ts for ts in target_skills if ts not in matched_targets]
+    matched = {m["target_skill"] for m in semantic_skill_match(resume_skills, target_skills, threshold)}
+    return [ts for ts in target_skills if ts not in matched]
 
 
 # =============================================================================
@@ -333,33 +458,71 @@ def extract_resume(sections: dict) -> dict:
     """
     Convert raw sections dict (from pdf_parser.parse_resume) into structured JSON.
 
+    Primary path: Groq LLM (llama-3.3-70b-versatile).
+      - Handles any resume format, section naming, or layout.
+      - No rules to maintain.
+
+    Fallback path: rule-based parsing.
+      - Activates automatically on API failure, quota error, or invalid JSON.
+      - Covers well-formatted resumes reliably.
+
     Args:
         sections: Output of pdf_parser.parse_resume()
-                  e.g. { "SKILLS": "Python, SQL...", "EXPERIENCE": "- Built..." }
 
     Returns:
         {
-            "skills":     [str, ...],   # individual skill tokens
-            "experience": [str, ...],   # bullet points + role/company labels
-            "education":  [str, ...],   # education entry lines
-            "projects":   [str, ...]    # bullet points + project title labels
+            "skills":     [str, ...],
+            "experience": [{"company", "role", "duration", "bullets"}, ...],
+            "education":  [{"degree", "institution", "grade", "year"}, ...],
+            "projects":   [{"title", "duration", "bullets"}, ...]
         }
-
-    Usage:
-        from pdf_parser import parse_resume
-        from resume_extraction import extract_resume
-
-        sections  = parse_resume("resume.pdf")
-        structured = extract_resume(sections)
-
-        # Semantic gap analysis (requires sentence-transformers):
-        from resume_extraction import find_missing_skills
-        jd_skills = ["Docker", "Kubernetes", "CI/CD", "REST APIs"]
-        gaps = find_missing_skills(structured["skills"], jd_skills)
     """
-    return {
-        "skills":     _parse_skills(_get_section(sections, _SKILLS_KEYS)),
-        "experience": _parse_bullets(_get_section(sections, _EXPERIENCE_KEYS)),
-        "education":  _parse_education(_get_section(sections, _EDUCATION_KEYS)),
-        "projects":   _parse_bullets(_get_section(sections, _PROJECTS_KEYS)),
-    }
+    prompt = _build_extraction_prompt(sections)
+    if not prompt:
+        print("[resume_extraction] No content to extract — returning empty result.")
+        return _empty_result()
+
+    print("[resume_extraction] Calling Groq for structured extraction...")
+    try:
+        response = _CLIENT.chat.completions.create(
+            model=_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a precise resume parser. "
+                        "Extract structured data exactly as instructed and return valid JSON only. "
+                        "Never invent or hallucinate data not present in the resume."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0,
+        )
+        raw = response.choices[0].message.content.strip()
+        raw = re.sub(r'^```(?:json)?\s*', '', raw)
+        raw = re.sub(r'\s*```$',          '', raw)
+
+        data   = json.loads(raw)
+        result = _validate_and_clean(data)
+
+        print(
+            f"[resume_extraction] Extracted — "
+            f"skills: {len(result['skills'])}, "
+            f"experience: {len(result['experience'])}, "
+            f"education: {len(result['education'])}, "
+            f"projects: {len(result['projects'])}"
+        )
+        return result
+
+    except Exception as e:
+        print(f"[resume_extraction] LLM extraction failed ({e}). Falling back to rule-based...")
+        result = _extract_resume_rule_based(sections)
+        print(
+            f"[resume_extraction] Fallback — "
+            f"skills: {len(result['skills'])}, "
+            f"experience: {len(result['experience'])}, "
+            f"education: {len(result['education'])}, "
+            f"projects: {len(result['projects'])}"
+        )
+        return result

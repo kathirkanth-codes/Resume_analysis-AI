@@ -14,7 +14,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from pdf_parser import parse_resume
-from resume_extraction import extract_resume_data
+from resume_extraction import extract_resume
 
 
 def _print_section(title: str, content):
@@ -78,7 +78,7 @@ def main():
 
     # ── Step 2: Extract structured data ───────────────────────
     print("\n[Step 2] Extracting structured data...")
-    structured = extract_resume_data(sections)
+    structured = extract_resume(sections)
 
     # ── Display results ────────────────────────────────────────
     _print_section("SKILLS", structured["skills"])
