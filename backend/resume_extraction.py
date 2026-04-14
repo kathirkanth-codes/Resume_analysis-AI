@@ -55,7 +55,7 @@ INSTRUCTIONS:
 
 skills:
 - Return a flat list of individual skill names (languages, frameworks, tools, concepts)
-- Split categorised lists: "Languages: Python, SQL" → ["Python", "SQL"]
+- Split categorised lists: "Languages: Python, SQL" -> ["Python", "SQL"]
 - Do NOT include category label words like "Languages" or "Frameworks"
 - No duplicates
 

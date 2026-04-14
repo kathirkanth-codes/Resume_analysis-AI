@@ -210,20 +210,30 @@ Return ONLY this JSON (no extra text):
 
 def _call_gemini(prompt: str) -> dict:
     """
-    Send prompt to Gemini 1.5 Flash and parse the JSON response.
+    Send prompt to Groq and parse the JSON response.
     Returns the parsed dict or raises ValueError on failure.
     """
-    response = _CLIENT.models.generate_content(model=_MODEL, contents=prompt)
-    raw      = response.text.strip()
+    response = _CLIENT.chat.completions.create(
+        model=_MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": "You are an experienced technical recruiter. Return only valid JSON — no markdown, no explanation.",
+            },
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0,
+    )
+    raw = response.choices[0].message.content.strip()
 
-    # Strip markdown code fences if Gemini adds them despite instructions
+    # Strip markdown code fences if Groq adds them despite instructions
     raw = re.sub(r'^```(?:json)?\s*', '', raw)
     raw = re.sub(r'\s*```$', '', raw)
 
     try:
         return json.loads(raw)
     except json.JSONDecodeError as e:
-        raise ValueError(f"[ai_evaluator] Gemini returned invalid JSON: {e}\nRaw: {raw[:300]}")
+        raise ValueError(f"[ai_evaluator] Groq returned invalid JSON: {e}\nRaw: {raw[:300]}")
 
 
 # =============================================================================

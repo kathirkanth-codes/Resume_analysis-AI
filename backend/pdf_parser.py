@@ -462,6 +462,7 @@ def _clean_line(line: str) -> str:
     line = re.sub(r'[\u201c\u201d]', '"', line)
     line = line.replace('•', '-').replace('\uf0b7', '-')
     line = line.replace('–', '-').replace('—', ' - ')
+    line = re.sub(r'[\u2192\u2190\u2194\u21d2\u27a1\u2794]', '->', line)  # arrows → ->
     line = re.sub(r'[ \t]+', ' ', line)
     return line.strip()
 
@@ -733,7 +734,7 @@ def parse_resume(pdf_path: str) -> dict:
 
     Returns {} if the PDF cannot be read.
     """
-    print(f"\n[pdf_parser] Starting → {pdf_path}")
+    print(f"\n[pdf_parser] Starting -> {pdf_path}")
 
     print("[1/3] Extracting raw text...")
     raw = extract_raw_text(pdf_path)
@@ -748,5 +749,5 @@ def parse_resume(pdf_path: str) -> dict:
     print("[3/3] Splitting into sections...")
     sections = split_into_sections(cleaned)
 
-    print(f"[pdf_parser] Done → sections: {list(sections.keys())}\n")
+    print(f"[pdf_parser] Done -> sections: {list(sections.keys())}\n")
     return sections

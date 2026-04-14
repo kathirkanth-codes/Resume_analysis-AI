@@ -30,7 +30,7 @@ Rules:
 """
 
 
-def _build_user_prompt(structured_data: dict) -> str:
+def _build_user_prompt(structured_data: dict, job_description: str = None) -> str:
     skills = ", ".join(structured_data.get("skills", []))
 
     experience_lines = []
@@ -57,6 +57,16 @@ def _build_user_prompt(structured_data: dict) -> str:
         education_lines.append(f"{degree} at {institution}, Grade: {grade}")
     education_block = "\n".join(education_lines) if education_lines else "No education listed."
 
+    jd_block = ""
+    if job_description and job_description.strip():
+        jd_block = f"""
+TARGET ROLE / JOB DESCRIPTION:
+{job_description.strip()}
+
+Consider alignment between this candidate's profile and the target role.
+Call out any clear mismatches or missing relevance to the role.
+"""
+
     return f"""Here is the candidate's resume data:
 
 SKILLS: {skills}
@@ -69,7 +79,7 @@ PROJECTS:
 
 EDUCATION:
 {education_block}
-
+{jd_block}
 Now roast this resume.
 
 Return ONLY a valid JSON object with this exact structure — no explanation, no markdown:
@@ -85,11 +95,11 @@ Return ONLY a valid JSON object with this exact structure — no explanation, no
 }}"""
 
 
-def roast_resume(structured_data: dict) -> dict:
-    user_prompt = _build_user_prompt(structured_data)
+def roast_resume(structured_data: dict, job_description: str = None) -> dict:
+    user_prompt = _build_user_prompt(structured_data, job_description=job_description)
 
     response = client.chat.completions.create(
-        model="llama3-8b-8192",
+        model="llama-3.1-8b-instant",
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
