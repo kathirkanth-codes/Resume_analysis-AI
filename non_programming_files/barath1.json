@@ -1,0 +1,21 @@
+{
+  "metadata": {
+    "source_file": "Bharath resume-1.pdf",
+    "parsed_at": "2026-04-06 14:31:20",
+    "sections_found": 5,
+    "section_names": [
+      "HEADER",
+      "PROJECTS",
+      "ACHIEVEMENTS",
+      "TECHNICAL SKILLS",
+      "CERTIFICATIONS"
+    ]
+  },
+  "sections": {
+    "HEADER": "Bharath VS\nVsbharath61@gmail.com +91-7558144028 linkedin.com/in/Bharath V.s\nSathyabama Institute of Science And Technology Chennai\nBacheler of Engineering in Data Science\nChennai ,India",
+    "PROJECTS": "Fireguardian using Arduino Jan 2025 - Apr 2025\nTech: C,C++\n Built a automatic fire extinguisher.\n Used Arduino,sensors.\nOnote Apr 2025 - Apr 2025\nTech:python,HTML\n Created a oline app for study material.\n Used python for backend and HTML for frontend.\nNostra E-Commerce\nTech: HTML,CSS,Java Script\n A online Shopping web page.",
+    "ACHIEVEMENTS": " Top 20 in hackerrank 2024.\n Won top 10 in HACKERA hackathon 2025.",
+    "TECHNICAL SKILLS": "C,Java,Python,SQL,R,HTML,CSS,Java Script.",
+    "CERTIFICATIONS": "- Cisco Networking Essentials\n- Cisco Getting Started with Cisco Packet Tracer\n- Cisco Exploring Networking with Cisco Packet Tracer"
+  }
+}

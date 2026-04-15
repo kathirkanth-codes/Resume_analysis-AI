@@ -1,0 +1,25 @@
+{
+  "metadata": {
+    "source_file": "70__ATS_rating_Resume_Template.pdf",
+    "parsed_at": "2026-04-08 10:41:41",
+    "sections_found": 7,
+    "section_names": [
+      "HEADER",
+      "PROFESSIONAL SUMMARY",
+      "EXPERIENCE",
+      "PROJECTS",
+      "TECHNICAL SKILLS",
+      "EDUCATION",
+      "CERTIFICATIONS"
+    ]
+  },
+  "sections": {
+    "HEADER": "ALFEEN UBAIDH\n+91 9789752610 | # alfeenubaidh@gmail.com | https://www.linkedin.com/in/alfeenubaidh/ | §\nhttps://github.com/Alfeenubaidh",
+    "PROFESSIONAL SUMMARY": "A pre-final year Computer Science (Data Science) undergraduate with hands-on experience in applied machine learning,\nanalytics, and production-ready ML systems. Skilled in building end-to-end pipelines, scenario-based forecasting models,\nand business intelligence dashboards. Strong foundation in statistics, machine learning, and explainable AI, with practical exposure to deployment and decision-oriented analytics.",
+    "EXPERIENCE": "Data Stories\nData Analyst (Project-Based Internship) Online\n- Developed an interactive hotel management analytics dashboard to support operational and revenue decisionmaking.\n- Analyzed booking trends, cancellations, ADR, and seasonal demand to identify occupancy and revenue patterns.\n- Designed executive-level KPIs with drill-downs by hotel type, market segment, and time period.\n- Converted raw transactional data into actionable insights for pricing strategy and capacity planning.",
+    "PROJECTS": "Explainable, Scenario-Based Crop Yield Forecasting System | Python, LightGBM, SHAP, FastAPI, Streamlit\n- Built an end-to-end ML system integrating satellite NDVI, climate, soil, and historical yield data.\n- Designed production-grade pipelines with schema validation, artifact versioning, and training-serving consistency.\n- Implemented teacher-student modeling with ensemble experimentation and deployable LightGBM inference.\n- Performed scenario-based robustness analysis by perturbing environmental variables.\n- Integrated SHAP explainability directly into inference for interpretable decision support.\nHotel Booking Analytics Dashboard | Tableau, SQL, Excel\n- Developed an interactive dashboard analyzing bookings, cancellations, ADR, and seasonal demand.\n- Created KPIs to identify revenue leakage, lead-time behavior, and customer segmentation.",
+    "TECHNICAL SKILLS": "Programming: Python, SQL, C, R\nData Science & ML: Pandas, NumPy, Scikit-learn, LightGBM, SHAP\nMLOps & Deployment: FastAPI, Streamlit, ZenML, REST APIs\nVisualization & BI: Tableau, Matplotlib\nDatabases: MySQL, MongoDB, Firebase",
+    "EDUCATION": "Sathyabama Institute of Science and Technology Chennai, India\nB.E. in Computer Science (Data Science) - CGPA: 7.30* 2023 - 2027\nSt Ann's Matric Higher Sec School Tirunelvelli, India\nSenior Secondary (matric) - CGPA: 7.57* 2022 - 2023",
+    "CERTIFICATIONS": "- Data Science Bootcamp Certificate (Udemy) 2\n- Python Data Structures & Algorithms Certificate (Udemy) 2\n- Mathematics for Machine Learning Certificate (DeepLearning.AI) 2"
+  }
+}

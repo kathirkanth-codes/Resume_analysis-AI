@@ -19,6 +19,9 @@ build/
 dist/
 *.egg-info/
 
+# Node
+node_modules/
+
 # Environment/secrets
 .env
 .env.*
@@ -32,3 +35,14 @@ Thumbs.db
 # Your local test files
 dummy_code.py
 test_pdf_parser.py
+backend/dummy_code.py
+backend/test_pdf_parser.py
+
+# JSON test output files
+json_files/
+*.json
+
+# Local dev notes
+backend/bug-skill_1.md
+backend/module_building.md
+backend/lateral-thinking.md
