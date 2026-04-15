@@ -19,6 +19,9 @@ build/
 dist/
 *.egg-info/
 
+# Node
+node_modules/
+
 # Environment/secrets
 .env
 .env.*
